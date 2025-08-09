@@ -1,0 +1,10 @@
+from array import *
+val = array('i',[8,6,4])
+val.append(2)
+val.append(8)
+val.remove(8)
+val.reverse()
+l = len(val)
+print("New aray is:",val)
+print("second value of new array is: ",val[1])
+print('Number of values in New array is : ',l)
