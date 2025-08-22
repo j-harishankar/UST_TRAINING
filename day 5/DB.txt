@@ -1,0 +1,129 @@
+import sqlite3
+import tkinter as tk
+from tkinter import ttk
+from tkcalendar import DateEntry
+
+# ---------- Database Functions ----------
+def init_db():
+    conn = sqlite3.connect("employees.db")
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS employees (
+            emp_id TEXT,
+            age INTEGER,
+            joining_date TEXT,
+            employment_type TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_record(emp_id, age, joining_date, employment_type):
+    conn = sqlite3.connect("employees.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO employees VALUES (?, ?, ?, ?)",
+              (emp_id, age, joining_date, employment_type))
+    conn.commit()
+    conn.close()
+
+def fetch_records(employment_type=None):
+    conn = sqlite3.connect("employees.db")
+    c = conn.cursor()
+    if employment_type and employment_type != "All":
+        c.execute("SELECT * FROM employees WHERE employment_type = ?", (employment_type,))
+    else:
+        c.execute("SELECT * FROM employees")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+# ---------- UI Navigation ----------
+def show_page1():
+    page2_frame.pack_forget()
+    page1_frame.pack(fill="both", expand=True)
+
+def show_page2():
+    page1_frame.pack_forget()
+    page2_frame.pack(fill="both", expand=True)
+    update_table()
+
+# ---------- Page 1 Actions ----------
+def on_save():
+    emp_id = emp_id_entry.get()
+    age = age_entry.get()
+    date = cal.get_date().strftime("%Y-%m-%d")
+    emp_type = emp_type_var.get()
+
+    if emp_id.strip() and age.isdigit():
+        save_record(emp_id, int(age), date, emp_type)
+        emp_id_entry.delete(0, tk.END)
+        age_entry.delete(0, tk.END)
+
+def on_view_records():
+    show_page2()
+
+# ---------- Page 2 Actions ----------
+def update_table(*args):
+    for row in tree.get_children():
+        tree.delete(row)
+    rows = fetch_records(filter_var.get())
+    for r in rows:
+        tree.insert("", tk.END, values=r)
+
+# ---------- Main Window ----------
+root = tk.Tk()
+root.title("Employee Records")
+root.geometry("500x400")
+
+
+
+# ============ Page 1 ============
+page1_frame = tk.Frame(root)
+
+tk.Label(page1_frame, text="Employee ID").pack()
+emp_id_entry = tk.Entry(page1_frame)
+emp_id_entry.pack()
+
+tk.Label(page1_frame, text="Age").pack()
+age_entry = tk.Entry(page1_frame)
+age_entry.pack()
+
+tk.Label(page1_frame, text="Joining Date").pack()
+cal = DateEntry(page1_frame, date_pattern='yyyy-mm-dd')
+cal.pack()
+
+tk.Label(page1_frame, text="Employment Type").pack()
+emp_type_var = tk.StringVar(value="Regular")
+emp_type_dropdown = ttk.Combobox(page1_frame, textvariable=emp_type_var,
+                                  values=["Regular", "Fixed time", "Intern"], state="readonly")
+emp_type_dropdown.pack()
+
+tk.Button(page1_frame, text="Save", command=on_save).pack(pady=5)
+tk.Button(page1_frame, text="View Records", command=on_view_records).pack()
+
+# ============ Page 2 ============
+page2_frame = tk.Frame(root)
+
+filter_var = tk.StringVar(value="All")
+filter_var.trace("w", update_table)
+
+tk.Label(page2_frame, text="Filter by Employment Type").pack()
+filter_dropdown = ttk.Combobox(page2_frame, textvariable=filter_var,
+                                values=["All", "Regular", "Fixed time", "Intern"], state="readonly")
+filter_dropdown.pack()
+
+tree = ttk.Treeview(page2_frame, columns=("ID", "Age", "Date", "Type"), show="headings")
+tree.heading("ID", text="Employee ID")
+tree.heading("Age", text="Age")
+tree.heading("Date", text="Joining Date")
+tree.heading("Type", text="Employment Type")
+tree.pack(fill="both", expand=True)
+
+tk.Button(page2_frame, text="Back", command=show_page1).pack(pady=5)
+
+
+# ============ Start App ============
+if __name__ == "__main__":
+    init_db()
+    show_page1()
+    root.mainloop()
